@@ -41,7 +41,7 @@ A comprehensive streaming voice AI framework with real-time STT, LLM, and TTS ca
 ### Installation
 
 ```bash
-git clone https://github.com/DhavalTalaviya/voice-agent
+git clone https://github.com/DhavalTalaviya/realtime-voice-ai-framework
 cd voice-agent
 pip install -e .
 ```
