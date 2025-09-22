@@ -1,0 +1,19 @@
+
+profile: offline  # offline | cloud
+transport: ws     # ws | rtc
+
+stt:
+  offline:
+    type: wav2vec2
+    model_name: facebook/wav2vec2-large-960h-lv60-self
+    device: cpu
+
+llm:
+  offline:
+    type: openai  # uses your Agent wrapper + NVIDIA base_url by default
+
+tts:
+  offline:
+    type: coqui
+    model_name: tts_models/en/ljspeech/fast_pitch
+    speed: 1.2

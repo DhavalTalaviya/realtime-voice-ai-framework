@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Voice Agent - Enhanced Streaming Client</title>
+<style>
+  :root { 
+    --bg: #0a0b0f; 
+    --fg: #e8eaed; 
+    --muted: #9aa0a6; 
+    --accent: #4285f4; 
+    --card: #1a1b20; 
+    --border: #2d2e33;
+    --success: #34a853;
+    --warning: #fbbc04;
+    --error: #ea4335;
+    --hover: #2a2b30;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Google Sans', sans-serif;
+    background: var(--bg); 
+    color: var(--fg); 
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  
+  .container { 
+    max-width: 1000px; 
+    margin: 0 auto; 
+    padding: 20px; 
+  }
+  
+  .header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .header h1 { 
+    font-size: 32px; 
+    font-weight: 300;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--success));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .header p {
+    color: var(--muted);
+    font-size: 16px;
+  }
+  
+  .main-card { 
+    background: var(--card); 
+    border: 1px solid var(--border); 
+    border-radius: 16px; 
+    padding: 24px; 
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    margin-bottom: 20px;
+  }
+  
+  .controls-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .server-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .info-pill { 
+    padding: 6px 12px; 
+    border-radius: 20px; 
+    background: var(--hover); 
+    border: 1px solid var(--border); 
+    font-size: 13px; 
+    color: var(--muted);
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  }
+  
+  button, select { 
+    background: var(--card); 
+    color: var(--fg); 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    padding: 10px 16px; 
+    cursor: pointer; 
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+  
+  button:hover:not(:disabled) { 
+    border-color: var(--accent); 
+    background: var(--hover);
+  }
+  
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  
+  .btn-primary:hover:not(:disabled) {
+    background: #3367d6;
+    border-color: #3367d6;
+  }
+  
+  .btn-danger {
+    background: var(--error);
+    border-color: var(--error);
+    color: white;
+  }
+  
+  .btn-danger:hover:not(:disabled) {
+    background: #d33b2c;
+    border-color: #d33b2c;
+  }
+  
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+  
+  .status-idle { background: var(--hover); color: var(--muted); }
+  .status-connected { background: rgba(52, 168, 83, 0.15); color: var(--success); }
+  .status-listening { background: rgba(66, 133, 244, 0.15); color: var(--accent); }
+  .status-processing { background: rgba(251, 188, 4, 0.15); color: var(--warning); }
+  .status-speaking { background: rgba(234, 67, 53, 0.15); color: var(--error); }
+  .status-error { background: rgba(234, 67, 53, 0.25); color: var(--error); }
+  
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  .status-listening .status-dot { animation: pulse 1s infinite; }
+  .status-speaking .status-dot { animation: pulse 0.8s infinite; }
+  
+  .audio-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  
+  .volume-meter { 
+    flex: 1;
+    height: 12px; 
+    background: var(--hover); 
+    border-radius: 6px; 
+    overflow: hidden; 
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  
+  .volume-bar { 
+    height: 100%; 
+    width: 0%; 
+    background: linear-gradient(90deg, var(--success), var(--warning), var(--error)); 
+    transition: width 80ms linear;
+    border-radius: 6px;
+  }
+  
+  .volume-label {
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 80px;
+  }
+  
+  .playback-section {
+    margin: 20px 0;
+  }
+  
+  .playback-section label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--fg);
+  }
+  
+  audio { 
+    width: 100%; 
+    height: 48px;
+    background: var(--hover);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  
+  .log-section {
+    margin-top: 24px;
+  }
+  
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  
+  .log-header h3 {
+    font-size: 16px;
+    font-weight: 500;
+  }
+  
+  .clear-log-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    background: var(--hover);
+    border: 1px solid var(--border);
+  }
+  
+  .log-container { 
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; 
+    background: #000; 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    padding: 16px; 
+    font-size: 13px; 
+    color: #e8eaed; 
+    height: 200px; 
+    overflow-y: auto; 
+    line-height: 1.4;
+  }
+  
+  .log-entry {
+    margin-bottom: 4px;
+  }
+  
+  .log-time {
+    color: var(--muted);
+    margin-right: 8px;
+  }
+  
+  .log-info { color: var(--accent); }
+  .log-success { color: var(--success); }
+  .log-warning { color: var(--warning); }
+  .log-error { color: var(--error); }
+  
+  .stats-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  
+  .stat-card {
+    background: var(--hover);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+  
+  .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  
+  .stat-label {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  
+  .debug-info {
+    background: rgba(66, 133, 244, 0.05);
+    border: 1px solid rgba(66, 133, 244, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 16px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 12px;
+  }
+  
+  .tips {
+    background: rgba(66, 133, 244, 0.1);
+    border: 1px solid rgba(66, 133, 244, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 20px;
+  }
+  
+  .tips h4 {
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  
+  .tips ul {
+    list-style: none;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  
+  .tips li {
+    margin-bottom: 4px;
+    padding-left: 16px;
+    position: relative;
+  }
+  
+  .tips li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+  
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .controls-section { flex-direction: column; align-items: stretch; }
+    .control-group { justify-content: space-between; }
+    .stats-section { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Voice Agent</h1>
+    <p>Real-time AI conversation with streaming STT, LLM, and TTS</p>
+  </div>
+
+  <div class="main-card">
+    
+    <div class="controls-section">
+      
+      <div class="control-group">
+        <button id="connect-btn" class="btn-primary">Connect</button>
+        <button id="disconnect-btn" class="btn-danger" disabled>Disconnect</button>
+      </div>
+      
+      <div class="control-group">
+        <button id="start-mic-btn" disabled>Start Microphone</button>
+        <button id="stop-mic-btn" disabled>Stop Microphone</button>
+      </div>
+      
+      <div class="status-indicator status-idle" id="status">
+        <div class="status-dot"></div>
+        <span>Idle</span>
+      </div>
+    </div>
+
+    <div class="audio-controls">
+      <div class="volume-label">Input Level:</div>
+      <div class="volume-meter">
+        <div id="volume-bar" class="volume-bar"></div>
+      </div>
+    </div>
+    
+    <div class="debug-info" id="debug-info">
+      <div><strong>Orchestrator State:</strong> <span id="orchestrator-state">Unknown</span></div>
+      <div><strong>Last Update:</strong> <span id="last-update">Never</span></div>
+      <div><strong>Frames Sent:</strong> <span id="frames-sent">0</span></div>
+    </div>
+  </div>
+
+  <div class="main-card">
+    <div class="log-header">
+      <h3>Session Log</h3>
+      <button id="clear-log-btn" class="clear-log-btn">Clear Log</button>
+    </div>
+    <div class="log-container" id="log-container"></div>
+  </div>
+
+  <div class="main-card">
+    <h3 style="margin-bottom: 16px;">Session Statistics</h3>
+    <div class="stats-section" id="stats-section">
+      <div class="stat-card">
+        <div class="stat-value" id="connections-stat">0</div>
+        <div class="stat-label">Connections</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="messages-stat">0</div>
+        <div class="stat-label">Messages</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="latency-stat">0ms</div>
+        <div class="stat-label">Avg Latency</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="duration-stat">0s</div>
+        <div class="stat-label">Session Time</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  
+  // DOM Elements
+  const elements = {
+    connectBtn: document.getElementById('connect-btn'),
+    disconnectBtn: document.getElementById('disconnect-btn'),
+    startMicBtn: document.getElementById('start-mic-btn'),
+    stopMicBtn: document.getElementById('stop-mic-btn'),
+    status: document.getElementById('status'),
+    volumeBar: document.getElementById('volume-bar'),
+    logContainer: document.getElementById('log-container'),
+    clearLogBtn: document.getElementById('clear-log-btn'),
+    sttEngine: document.getElementById('stt-engine'),
+    orchestratorState: document.getElementById('orchestrator-state'),
+    lastUpdate: document.getElementById('last-update'),
+    framesSent: document.getElementById('frames-sent'),
+    // Stats
+    connectionsStat: document.getElementById('connections-stat'),
+    messagesStat: document.getElementById('messages-stat'),
+    latencyStat: document.getElementById('latency-stat'),
+    durationStat: document.getElementById('duration-stat'),
+  };
+
+  // Application State
+  const state = {
+    websocket: null,
+    audioContext: null,
+    mediaStream: null,
+    scriptProcessor: null,
+    sourceNode: null,
+    isConnected: false,
+    isRecording: false,
+    connectionCount: 0,
+    messageCount: 0,
+    framesSent: 0,
+    sessionStartTime: null,
+    latencies: [],
+    audioBuffer: new Float32Array(0),
+    nextPlayTime: 0,
+    lastStatusUpdate: null,
+  };
+
+  // Constants
+  const SAMPLE_RATE = 16000;
+  const FRAME_SIZE = 320; // 20ms at 16kHz
+  const SERVER_URL = 'ws://127.0.0.1:8000/ws';
+  
+  // Utility Functions
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+  
+  function calculateRMS(audioData) {
+    let sum = 0;
+    for (let i = 0; i < audioData.length; i++) {
+      sum += audioData[i] * audioData[i];
+    }
+    return Math.sqrt(sum / audioData.length);
+  }
+  
+  function float32ToInt16(float32Array) {
+    const int16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+      const sample = Math.max(-1, Math.min(1, float32Array[i]));
+      int16Array[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+    }
+    return int16Array;
+  }
+
+  // Logging Functions
+  function log(message, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'log-time';
+    timeSpan.textContent = `[${timestamp}]`;
+    
+    const messageSpan = document.createElement('span');
+    messageSpan.className = `log-${type}`;
+    messageSpan.textContent = message;
+    
+    entry.appendChild(timeSpan);
+    entry.appendChild(messageSpan);
+    elements.logContainer.appendChild(entry);
+    elements.logContainer.scrollTop = elements.logContainer.scrollHeight;
+    
+    // Keep log size manageable
+    const maxEntries = 100;
+    while (elements.logContainer.children.length > maxEntries) {
+      elements.logContainer.removeChild(elements.logContainer.firstChild);
+    }
+  }
+
+  function setStatus(text, type = 'idle') {
+    elements.status.className = `status-indicator status-${type}`;
+    elements.status.querySelector('span').textContent = text;
+  }
+
+  function updateDebugInfo(orchestratorState = null) {
+    if (orchestratorState) {
+      elements.orchestratorState.textContent = orchestratorState;
+    }
+    elements.lastUpdate.textContent = new Date().toLocaleTimeString();
+    elements.framesSent.textContent = state.framesSent;
+  }
+
+  function updateStats() {
+    elements.connectionsStat.textContent = state.connectionCount;
+    elements.messagesStat.textContent = state.messageCount;
+    
+    if (state.latencies.length > 0) {
+      const avgLatency = state.latencies.reduce((a, b) => a + b, 0) / state.latencies.length;
+      elements.latencyStat.textContent = `${Math.round(avgLatency)}ms`;
+    }
+    
+    if (state.sessionStartTime) {
+      const duration = (Date.now() - state.sessionStartTime) / 1000;
+      elements.durationStat.textContent = formatTime(duration);
+    }
+  }
+
+  function handleStatusMessage(statusData) {
+    const { status, data = {} } = statusData;
+    
+    // Map server status to client status
+    const statusMap = {
+      'connected': { text: 'Connected', type: 'connected' },
+      'listening': { text: 'Listening', type: 'listening' },
+      'processing': { text: 'Processing', type: 'processing' },
+      'speaking': { text: 'Assistant Speaking', type: 'speaking' },
+      'error': { text: 'Error', type: 'error' },
+      'disconnecting': { text: 'Disconnecting', type: 'idle' },
+      'session_ended': { text: 'Session Ended', type: 'idle' }
+    };
+    
+    const mappedStatus = statusMap[status] || { text: status, type: 'idle' };
+    setStatus(mappedStatus.text, mappedStatus.type);
+    
+    // Update debug info
+    if (data.orchestrator_state) {
+      updateDebugInfo(data.orchestrator_state);
+    }
+    
+    // Log status changes
+    if (status !== state.lastStatusUpdate) {
+      log(`Status: ${mappedStatus.text}`, 'info');
+      state.lastStatusUpdate = status;
+    }
+    
+    // Update stats if provided
+    if (data.stats) {
+      // Update with server-provided stats
+      if (data.stats.utterances_processed !== undefined) {
+        elements.messagesStat.textContent = data.stats.utterances_processed;
+      }
+      if (data.stats.average_response_latency_ms !== undefined) {
+        elements.latencyStat.textContent = `${Math.round(data.stats.average_response_latency_ms)}ms`;
+      }
+    }
+    
+    updateDebugInfo();
+  }
+
+  // Audio Functions
+  async function initializeAudioContext() {
+    if (!state.audioContext) {
+      state.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: SAMPLE_RATE
+      });
+      
+      if (state.audioContext.state === 'suspended') {
+        await state.audioContext.resume();
+      }
+    }
+  }
+
+  async function startMicrophone() {
+    try {
+      await initializeAudioContext();
+      
+      state.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          sampleRate: SAMPLE_RATE,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      state.sourceNode = state.audioContext.createMediaStreamSource(state.mediaStream);
+      
+      const bufferSize = 4096;
+      state.scriptProcessor = state.audioContext.createScriptProcessor(bufferSize, 1, 1);
+      
+      state.audioBuffer = new Float32Array(0);
+      state.framesSent = 0;
+      
+      state.scriptProcessor.onaudioprocess = (event) => {
+        if (!state.isRecording || !state.websocket || state.websocket.readyState !== WebSocket.OPEN) {
+          return;
+        }
+        
+        const inputBuffer = event.inputBuffer.getChannelData(0);
+        
+        // Update volume meter
+        const rms = calculateRMS(inputBuffer);
+        const volumePercent = Math.min(100, Math.max(0, rms * 300));
+        elements.volumeBar.style.width = `${volumePercent}%`;
+        
+        // Concatenate with existing buffer
+        const newBuffer = new Float32Array(state.audioBuffer.length + inputBuffer.length);
+        newBuffer.set(state.audioBuffer);
+        newBuffer.set(inputBuffer, state.audioBuffer.length);
+        state.audioBuffer = newBuffer;
+        
+        // Send in 20ms frames (320 samples at 16kHz)
+        let offset = 0;
+        while (offset + FRAME_SIZE <= state.audioBuffer.length) {
+          const frame = state.audioBuffer.subarray(offset, offset + FRAME_SIZE);
+          const int16Frame = float32ToInt16(frame);
+          
+          if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
+            state.websocket.send(int16Frame.buffer);
+            state.framesSent++;
+            
+            // Update debug info periodically
+            if (state.framesSent % 50 === 0) {
+              updateDebugInfo();
+            }
+          }
+          
+          offset += FRAME_SIZE;
+        }
+        
+        // Keep remaining samples for next iteration
+        if (offset < state.audioBuffer.length) {
+          state.audioBuffer = state.audioBuffer.subarray(offset);
+        } else {
+          state.audioBuffer = new Float32Array(0);
+        }
+      };
+
+      // Connect audio nodes
+      state.sourceNode.connect(state.scriptProcessor);
+      state.scriptProcessor.connect(state.audioContext.destination);
+      
+      state.isRecording = true;
+      elements.startMicBtn.disabled = true;
+      elements.stopMicBtn.disabled = false;
+      
+      log('Microphone started successfully', 'success');
+      
+    } catch (error) {
+      log(`Microphone error: ${error.message}`, 'error');
+      setStatus('Microphone Error', 'error');
+    }
+  }
+
+  function stopMicrophone() {
+    try {
+      if (state.scriptProcessor) {
+        state.scriptProcessor.disconnect();
+        state.scriptProcessor = null;
+      }
+      
+      if (state.sourceNode) {
+        state.sourceNode.disconnect();
+        state.sourceNode = null;
+      }
+      
+      if (state.mediaStream) {
+        state.mediaStream.getTracks().forEach(track => track.stop());
+        state.mediaStream = null;
+      }
+      
+      state.isRecording = false;
+      state.audioBuffer = new Float32Array(0);
+      
+      elements.startMicBtn.disabled = false;
+      elements.stopMicBtn.disabled = true;
+      elements.volumeBar.style.width = '0%';
+      
+      log('Microphone stopped', 'info');
+      
+    } catch (error) {
+      log(`Error stopping microphone: ${error.message}`, 'error');
+    }
+  }
+
+  async function playAudioChunk(audioData) {
+    try {
+      await initializeAudioContext();
+      
+      const float32Array = new Float32Array(audioData);
+      const audioBuffer = state.audioContext.createBuffer(1, float32Array.length, SAMPLE_RATE);
+      audioBuffer.getChannelData(0).set(float32Array);
+      
+      const sourceNode = state.audioContext.createBufferSource();
+      sourceNode.buffer = audioBuffer;
+      sourceNode.connect(state.audioContext.destination);
+      
+      const when = Math.max(state.audioContext.currentTime + 0.01, state.nextPlayTime);
+      sourceNode.start(when);
+      
+      state.nextPlayTime = when + audioBuffer.duration;
+      
+    } catch (error) {
+      log(`Audio playback error: ${error.message}`, 'error');
+    }
+  }
+
+  // WebSocket Functions
+  function connectWebSocket() {
+    if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    try {
+      state.websocket = new WebSocket(SERVER_URL);
+      state.websocket.binaryType = 'arraybuffer';
+      
+      state.websocket.onopen = () => {
+        state.isConnected = true;
+        state.connectionCount++;
+        state.sessionStartTime = Date.now();
+        state.framesSent = 0;
+        
+        elements.connectBtn.disabled = true;
+        elements.disconnectBtn.disabled = false;
+        elements.startMicBtn.disabled = false;
+        
+        setStatus('Connected', 'connected');
+        log('Connected to voice agent server', 'success');
+        updateStats();
+        updateDebugInfo();
+      };
+      
+      state.websocket.onmessage = async (event) => {
+        state.messageCount++;
+        
+        if (event.data instanceof ArrayBuffer) {
+          // Received TTS audio data
+          await playAudioChunk(event.data);
+        } else {
+          // Received JSON status message
+          try {
+            const message = JSON.parse(event.data);
+            if (message.type === 'status') {
+              handleStatusMessage(message);
+            } else {
+              log(`Server: ${event.data}`, 'info');
+            }
+          } catch (e) {
+            // Plain text message
+            log(`Server: ${event.data}`, 'info');
+          }
+        }
+        
+        updateStats();
+      };
+      
+      state.websocket.onclose = (event) => {
+        state.isConnected = false;
+        
+        elements.connectBtn.disabled = false;
+        elements.disconnectBtn.disabled = true;
+        elements.startMicBtn.disabled = true;
+        elements.stopMicBtn.disabled = true;
+        
+        setStatus('Disconnected', 'error');
+        
+        if (event.wasClean) {
+          log('Connection closed cleanly', 'info');
+        } else {
+          log(`Connection closed unexpectedly (${event.code})`, 'warning');
+        }
+        
+        stopMicrophone();
+        state.nextPlayTime = 0;
+        updateDebugInfo('DISCONNECTED');
+      };
+      
+      state.websocket.onerror = (error) => {
+        log('WebSocket error - check if server is running', 'error');
+        setStatus('Connection Error', 'error');
+      };
+      
+    } catch (error) {
+      log(`Connection error: ${error.message}`, 'error');
+      setStatus('Connection Failed', 'error');
+    }
+  }
+
+  function disconnectWebSocket() {
+    if (state.websocket) {
+      if (state.websocket.readyState === WebSocket.OPEN) {
+        // Send end signal
+        try {
+          const endSignal = new TextEncoder().encode('__END__');
+          state.websocket.send(endSignal);
+        } catch (error) {
+          log(`Error sending end signal: ${error.message}`, 'warning');
+        }
+      }
+      
+      state.websocket.close();
+      state.websocket = null;
+    }
+    
+    stopMicrophone();
+  }
+
+  // Event Listeners
+  elements.connectBtn.addEventListener('click', connectWebSocket);
+  elements.disconnectBtn.addEventListener('click', disconnectWebSocket);
+  elements.startMicBtn.addEventListener('click', startMicrophone);
+  elements.stopMicBtn.addEventListener('click', stopMicrophone);
+  
+  elements.clearLogBtn.addEventListener('click', () => {
+    elements.logContainer.innerHTML = '';
+    log('Log cleared', 'info');
+  });
+
+  // Periodic stats update
+  setInterval(updateStats, 1000);
+
+  // Initialize
+  log('Voice Agent client initialized', 'info');
+  log('Click Connect to start a session', 'info');
+  updateDebugInfo('IDLE');
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    disconnectWebSocket();
+  });
+
+})();
+</script>
+</body>
+</html>
