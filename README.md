@@ -294,10 +294,3 @@ mypy .
 ## License
 
 MIT License - see LICENSE file for details.
-
-## Support
-
-This is production-grade infrastructure designed for developers with audio processing experience. For basic voice AI tutorials, start with simpler frameworks before using this system.
-
-- GitHub Issues: Bug reports and feature requests
-- Discussions: Architecture questions and usage help
